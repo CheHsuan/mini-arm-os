@@ -1,12 +1,14 @@
 #include <stdint.h>
+#include "threads.h"
 #include "shell.h"
 #include "reg.h"
 
-int fibonacci(int x)
+extern int fibonacci(int x);
+
+void fib()
 {
-    if(x == 0) return 0;
-    if(x == 1) return 1;
-    return fibonacci(x-1) + fibonacci(x-2);
+	int result = fibonacci(12);
+	print_int(result);
 }
 
 void print_str(const char *str)
@@ -57,12 +59,13 @@ static int strcmp(const char *a,const char *b)
 
 void commandCheck(const char *command)
 {
+	const char *commandthread = "commandthread";
     if(strcmp(command, "fibonacci") == 0) {
         print_str("The fibonacci sequence at ");
         print_int(12);
         print_str(" is: ");
-        int i = fibonacci(12);
-        print_int(i);
+		if(thread_create(fib, (void *) commandthread) == -1)
+			print_str("fibonacci thread creation failed\r\n");
         print_str("\n");
     }
 
