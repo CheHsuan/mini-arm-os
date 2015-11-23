@@ -5,10 +5,24 @@
 
 extern int fibonacci(int x);
 
-void fib()
+int TestAndSet(volatile int *lockPtr)
 {
-	int result = fibonacci(12);
-	print_int(result);
+    int oldValue;
+    oldValue = *lockPtr;
+    *lockPtr = LOCKED;
+    return oldValue;
+}
+
+void fib(void *mutexlock)
+{
+    int result = fibonacci(12);
+    while(TestAndSet(mutexlock) == 1);
+    print_str("The fibonacci sequence at ");
+    print_int(12);
+    print_str(" is: ");
+    print_int(result);
+    print_str("\n");
+    *(int *)mutexlock = 0;
 }
 
 void print_str(const char *str)
@@ -57,18 +71,12 @@ static int strcmp(const char *a,const char *b)
         return 1;
 }
 
-void commandCheck(const char *command)
+void commandCheck(const char *command, volatile int *mutexlock)
 {
-	const char *commandthread = "commandthread";
     if(strcmp(command, "fibonacci") == 0) {
-        print_str("The fibonacci sequence at ");
-        print_int(12);
-        print_str(" is: ");
-		if(thread_create(fib, (void *) commandthread) == -1)
-			print_str("fibonacci thread creation failed\r\n");
-        print_str("\n");
+        if(thread_create(fib, (void *) mutexlock) == -1)
+            print_str("fibonacci thread creation failed\r\n");
     }
-
 }
 
 void shell()
@@ -77,6 +85,7 @@ void shell()
     char command[100];
     int index = 0;
     char prompt[19] = "guest@mini-arm-os$\0";
+    volatile int mutexlock = 0;
     print_str(prompt);
     while(1) {
         while (!(*(USART2_SR) & USART_SR_RXNE));
@@ -85,8 +94,10 @@ void shell()
             command[index] = '\0';
             index = 0;
             print_str("\n");
-            commandCheck(command);
+            commandCheck(command,&mutexlock);
+            while(TestAndSet(&mutexlock) == 1);
             print_str(prompt);
+            mutexlock = 0;
         } else if(c == 8 || c == 127) {
             if(index > 0) {
                 command[index-1] = ' ';
