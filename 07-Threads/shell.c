@@ -55,6 +55,12 @@ void print_int(int num)
     print_str(&intArray[i]);
 }
 
+char get_char()
+{
+    while (!(*(USART2_SR) & USART_SR_RXNE));
+    return *(USART2_DR);
+}
+
 void commandCheck(const char *command, volatile int *mutexlock)
 {
     threadInfo commandInfo;
@@ -70,38 +76,46 @@ void commandCheck(const char *command, volatile int *mutexlock)
 void shell()
 {
     char c;
-    char command[100];
+    char command[MAX_COMMAND_LENGTH];
+    char history[MAX_COMMAND_LENGTH];
     int index = 0;
-    char prompt[19] = "guest@mini-arm-os$\0";
+    char *prompt = "guest@mini-arm-os$\0";
     volatile int mutexlock = 0;
+
     print_str(prompt);
+
     while(1) {
-        while (!(*(USART2_SR) & USART_SR_RXNE));
-        c = *(USART2_DR);
-        if(c == 13) {
-            command[index] = '\0';
-            index = 0;
-            print_str("\n");
-            commandCheck(command,&mutexlock);
-            while(TestAndSet(&mutexlock) == 1);
-            print_str(prompt);
-            mutexlock = 0;
-        } else if(c == 8 || c == 127) {
-            if(index > 0) {
-                command[index-1] = ' ';
+        c = get_char();
+        switch(c) {
+            // enter
+            case 13:
                 command[index] = '\0';
-                print_str("\r");
+                strcpy(history, command);
+                index = 0;
+                print_str("\n");
+                commandCheck(command,&mutexlock);
+                while(TestAndSet(&mutexlock) == 1);
                 print_str(prompt);
-                print_str(command);
-                index--;
-                command[index] = '\0';
-                print_str("\r");
-                print_str(prompt);
-                print_str(command);
-            }
-        } else {
-            print_char(c);
-            command[index++] = c;
+                mutexlock = 0;
+                break;
+            // backspace
+            case 127:
+                if(index > 0) {
+                    command[index-1] = ' ';
+                    command[index] = '\0';
+                    print_str("\r");
+                    print_str(prompt);
+                    print_str(command);
+                    index--;
+                    command[index] = '\0';
+                    print_str("\r");
+                    print_str(prompt);
+                    print_str(command);
+                }
+                break;
+            default:
+                print_char(c);
+                command[index++] = c;
         }
     }
 }

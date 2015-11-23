@@ -2,6 +2,7 @@
 #define USART_FLAG_TXE  ((uint16_t) 0x0080)
 
 #define LOCKED 1
+#define MAX_COMMAND_LENGTH 255
 
 void fib();
 void print_str(const char *str);
