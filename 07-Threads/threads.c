@@ -11,6 +11,7 @@ typedef struct {
 	void *stack;
 	void *orig_stack;
 	uint8_t in_use;
+	unsigned int priority;
 } tcb_t;
 
 static tcb_t tasks[MAX_TASKS];
@@ -31,9 +32,18 @@ void __attribute__((naked)) pendsv_handler()
 
 	/* Find a new task to run */
 	while (1) {
-		lastTask++;
+		/*lastTask++;
 		if (lastTask == MAX_TASKS)
-			lastTask = 0;
+			lastTask = 0;*/
+		//prority scheduling
+		int max = 0;
+		for(int i = 0; i < MAX_TASKS ; i++){
+			if(tasks[i].in_use){
+				if(tasks[i].priority >= tasks[max].priority)
+					max = i;
+			}		
+		}
+		lastTask = max;	
 		if (tasks[lastTask].in_use) {
 			/* Move the task's stack pointer address into r0 */
 			asm volatile("mov r0, %0\n" : : "r" (tasks[lastTask].stack));
@@ -73,12 +83,14 @@ void thread_start()
 	             "bx lr\n");
 }
 
-int thread_create(void (*run)(void *), void *userdata)
+int thread_create(void (*run)(void *), void *data)
 {
 	/* Find a free thing */
 	int threadId = 0;
 	uint32_t *stack;
-
+	threadInfo *userdata = (threadInfo *)data;
+	//char *userdata = data1->name;
+		
 	for (threadId = 0; threadId < MAX_TASKS; threadId++) {
 		if (tasks[threadId].in_use == 0)
 			break;
@@ -96,11 +108,11 @@ int thread_create(void (*run)(void *), void *userdata)
 	stack += STACK_SIZE - 32; /* End of stack, minus what we are about to push */
 	if (first) {
 		stack[8] = (unsigned int) run;
-		stack[9] = (unsigned int) userdata;
+		stack[9] = (unsigned int) userdata->name;
 		first = 0;
 	} else {
 		stack[8] = (unsigned int) THREAD_PSP;
-		stack[9] = (unsigned int) userdata;
+		stack[9] = (unsigned int) userdata->name;
 		stack[14] = (unsigned) &thread_self_terminal;
 		stack[15] = (unsigned int) run;
 		stack[16] = (unsigned int) 0x21000000; /* PSR Thumb bit */
@@ -109,6 +121,7 @@ int thread_create(void (*run)(void *), void *userdata)
 	/* Construct the control block */
 	tasks[threadId].stack = stack;
 	tasks[threadId].in_use = 1;
+	tasks[threadId].priority = userdata->priority;	
 
 	return threadId;
 }

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "threads.h"
 #include "shell.h"
+#include "str.h"
 #include "reg.h"
 
 extern int fibonacci(int x);
@@ -13,16 +14,17 @@ int TestAndSet(volatile int *lockPtr)
     return oldValue;
 }
 
-void fib(void *mutexlock)
+void fib(void *threaddata)
 {
+    threadInfo *data = (threadInfo *)threaddata;
     int result = fibonacci(12);
-    while(TestAndSet(mutexlock) == 1);
+    while(TestAndSet(data->mutexlock) == 1);
     print_str("The fibonacci sequence at ");
     print_int(12);
     print_str(" is: ");
     print_int(result);
     print_str("\n");
-    *(int *)mutexlock = 0;
+    data->mutexlock = 0;
 }
 
 void print_str(const char *str)
@@ -53,28 +55,14 @@ void print_int(int num)
     print_str(&intArray[i]);
 }
 
-static int strcmp(const char *a,const char *b)
-{
-    while(*a != '\0' && *b != '\0') {
-        if(*a > *b)
-            return 1;
-        else if(*a < *b)
-            return -1;
-        a++;
-        b++;
-    }
-    if(*a == '\0' && *b == '\0')
-        return 0;
-    else if(*a == '\0' && *b != '\0')
-        return -1;
-    else
-        return 1;
-}
-
 void commandCheck(const char *command, volatile int *mutexlock)
 {
+    threadInfo commandInfo;
     if(strcmp(command, "fibonacci") == 0) {
-        if(thread_create(fib, (void *) mutexlock) == -1)
+        strcpy(commandInfo.name,"fibonacci");
+        commandInfo.priority = 5;
+        commandInfo.mutexlock = mutexlock;
+        if(thread_create(fib, (void *) &commandInfo) == -1)
             print_str("fibonacci thread creation failed\r\n");
     }
 }

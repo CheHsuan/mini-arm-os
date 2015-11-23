@@ -12,7 +12,7 @@ all: $(TARGET)
 fib.o: fib.s
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(TARGET): os.c startup.c malloc.c threads.c fib.o shell.c 
+$(TARGET): os.c startup.c malloc.c threads.c fib.o shell.c str.c 
 	$(CC) $(CFLAGS) $^ -o os.elf
 	$(CROSS_COMPILE)objcopy -Obinary os.elf os.bin
 	$(CROSS_COMPILE)objdump -S os.elf > os.list

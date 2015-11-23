@@ -3,6 +3,7 @@
 #include "reg.h"
 #include "threads.h"
 #include "shell.h"
+#include "str.h"
 
 /* USART TXE Flag
  * This flag is cleared when data is written to USARTx_DR and
@@ -36,11 +37,13 @@ void usart_init(void)
 
 int main(void)
 {
-    const char *str = "shell";
+    threadInfo shellinfo;
+    strcpy(shellinfo.name, "shell");
+    shellinfo.priority = 10;
 
     usart_init();
 
-    if (thread_create(shell, (void *) str) == -1)
+    if (thread_create(shell, (void *) &shellinfo) == -1)
         print_str("Shell creation failed\r\n");
 
     /* SysTick configuration */
