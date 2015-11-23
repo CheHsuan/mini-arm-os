@@ -1,10 +1,10 @@
 #ifndef __THREADS_H__
 #define __THREADS_H__
 
-typedef struct{
-	char *name;
-	unsigned int priority;
-	volatile int *mutexlock;
+typedef struct {
+    char *name;
+    unsigned int priority;
+    volatile int *mutexlock;
 } threadInfo;
 
 void thread_start();
