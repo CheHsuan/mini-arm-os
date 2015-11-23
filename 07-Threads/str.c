@@ -23,4 +23,5 @@ void strcpy(char *a, const char *b)
         a++;
         b++;
     }
+    *a = '\0';
 }
